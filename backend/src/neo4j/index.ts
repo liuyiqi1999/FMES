@@ -22,11 +22,11 @@ const event = {
     type: 'string',
     category: 'string',
     trackerId: 'string',
-    eventId: 'number',
+    eventId: 'integer',
     data: 'string', // TODO: 定义类型
-    time: 'number',
+    time: 'integer',
     level: 'string',
-    uid: 'number' // 用于鸭式辨形区分事件，不是唯一区分
+    uid: 'integer' // 用于鸭式辨形区分事件，不是唯一区分
 }
 
 const user = {
