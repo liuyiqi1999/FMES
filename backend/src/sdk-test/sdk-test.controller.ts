@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, HttpException } from '@nestjs/common';
 
 @Controller('sdk-test')
 export class SdkTestController {
@@ -9,7 +9,7 @@ export class SdkTestController {
 
     @Post('/exception/post')
     exceptionPost(@Body('test') test: string): string {
-        return 'exceptionPost, request body: '+test;
+        throw new HttpException(`exceptionPost, request body: ${test}`, 500);
     }
 
     @Get('/normal')
@@ -19,6 +19,6 @@ export class SdkTestController {
 
     @Get('/exception')
     exception(): string {
-        return 'exceptionGet';
+        throw new HttpException(`exceptionGet`, 500);
     }
 }

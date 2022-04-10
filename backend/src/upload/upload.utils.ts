@@ -1,8 +1,8 @@
 import { BreadcrumbType } from "./dto/upload-event-type.dto";
 import { hashCode } from "src/util";
 
-export function getBreadcrumbEventId(breadcrumb: BreadcrumbType) {
-    const id = breadcrumb.category + breadcrumb.data + breadcrumb.level + breadcrumb.time + breadcrumb.type;
-    const hash = hashCode(id);
+export function getBreadcrumbEventUid(breadcrumb: BreadcrumbType) {
+    const uid = breadcrumb.category + breadcrumb.data + breadcrumb.level + breadcrumb.time + breadcrumb.type;
+    const hash = hashCode(uid);
     return hash;
 }
