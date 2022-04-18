@@ -1,58 +1,49 @@
-const a = {a1: 'a1'};
-const b = {
-    "type": "Code Error",
-    "data": {
-        "time": 1649160632807,
-        "url": "http://localhost:5500/",
-        "name": "TypeError",
-        "level": "normal",
-        "message": "a.split is not a function",
-        "stack": [
-            {
-                "url": "http://localhost:5500/src/App.vue",
-                "func": "codeError",
-                "args": [],
-                "line": 7,
-                "column": 5
-            },
-            {
-                "url": "http://localhost:5500/node_modules/.vite/vue.js?v=f72ef081",
-                "func": "callWithErrorHandling",
-                "args": [],
-                "line": 1363,
-                "column": 18
-            },
-            {
-                "url": "http://localhost:5500/node_modules/.vite/vue.js?v=f72ef081",
-                "func": "callWithAsyncErrorHandling",
-                "args": [],
-                "line": 1371,
-                "column": 17
-            },
-            {
-                "url": "http://localhost:5500/node_modules/.vite/vue.js?v=f72ef081",
-                "func": "HTMLButtonElement.invoker",
-                "args": [],
-                "line": 7352,
-                "column": 7
-            }
-        ],
-        "type": "JAVASCRIPT",
-        "errorId": 229498545
-    },
-    "category": "exception",
-    "level": "error",
-    "time": 1649160632808
-};
-const obj = b;
+// function safeStringify(obj) {
+    
 
-const set = new Set()
-const str = JSON.stringify(obj, function (_key, value) {
-if (set.has(value)) {
-    return 'Circular'
+//     const str = JSON.stringify(obj, function (_key, value) {
+//         if (set.has(value)) {
+//         return 'Circular'
+//         }
+//         typeof value === 'object' && set.add(value)
+//         return value
+//     })
+//     set.clear()
+//     return str
+// }
+
+function safeStringify (obj) {
+    const set = new Set()
+    const _dfs_fix_circular = (v) => {
+        if(set.has(v)) {
+            return true;
+        } else {
+            if(typeof v === 'object' && Object.entries(v).length > 0) { // v has children
+                set.add(v); // must be a new element in the set
+                Object.entries(v).forEach(entry => {
+                    const key = entry[0];
+                    const value = entry[1];
+                    const res = _dfs_fix_circular(value);
+                    if(res) { // value is Circular
+                        v[key] = 'Circular';
+                    } else { // value is NOT Circular
+                        // Noop, next value
+                    }
+                })
+            } else { // v is leaf
+                // Noop, no need to count leaf
+            }
+            return false;
+        }
+    }
+    _dfs_fix_circular(obj);
+    try {
+        return JSON.stringify(obj);
+    } catch (error) {
+        return 'Parse Error! ';
+    }
 }
-typeof value === 'object' && set.add(value)
-return value
-})
-set.clear()
-console.log(str);
+const a = {a1: '1', a2: '1'};
+a.a2 = a;
+a.a3 = a;
+console.log(safeStringify(a));
