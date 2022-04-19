@@ -12,10 +12,10 @@ export class UploadController {
         @Body() uploadEventTypeDto: UploadEventTypeDto
     ): Promise<string> {
         const { authInfo, breadcrumb, data } = uploadEventTypeDto;
-        
         // Neo4j
         try{
             this.uploadService.upload(authInfo, breadcrumb);
+            console.log('uploaded! ');
             return "uploaded";
         }catch(error) {
             throw new HttpException('upload error: ' + error, 500);

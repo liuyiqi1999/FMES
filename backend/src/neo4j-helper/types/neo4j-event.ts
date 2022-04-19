@@ -6,24 +6,14 @@ export const enum BREADCRUMBCATEGORYS {
     LIFECYCLE = 'lifecycle' // TODO
 }
 
-// export const enum BrowserBreadcrumbTypes {
-//     ROUTE = 'Route',
-//     CLICK = 'UI.Click',
-//     CONSOLE = 'Console',
-//     XHR = 'Xhr',
-//     FETCH = 'Fetch',
-//     UNHANDLEDREJECTION = 'Unhandledrejection',
-//     RESOURCE = 'Resource',
-//     CODE_ERROR = 'Code Error',
-//     CUSTOMER = 'Customer'
-// }
-
-export class Neo4jEvent {
+export class Neo4jAbstractEvent {
     type: string
     category: string
-    trackerId: string
-    eventId: number
-    data: string
-    time: number
+    data: any
     level: string
+}
+
+export class Neo4jEvent extends Neo4jAbstractEvent {
+    trackerId: string
+    time: number
 }

@@ -6,6 +6,7 @@ export function getInstance() {
         instance = require('neode')
             .fromEnv()
             .with({
+                AbstractEvent: abstractEvent,
                 Event: event,
                 User: user
             });
@@ -18,15 +19,20 @@ export function getBuilder() {
     return instance.query();
 }
 
+const abstractEvent = {
+    type: 'string',
+    category: 'string',
+    data: 'string',
+    level: 'string',
+}
+
 const event = {
     type: 'string',
     category: 'string',
     trackerId: 'string',
-    eventId: 'integer',
-    data: 'string', // TODO: 定义类型
+    data: 'string',
     time: 'integer',
     level: 'string',
-    uid: 'integer' // 用于鸭式辨形区分事件，不是唯一区分
 }
 
 const user = {

@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Neo4jHelperService } from "src/neo4j-helper/neo4j-helper.service";
 import { AuthInfoType } from "./dto/upload-event-type.dto";
-import { getBreadcrumbEventUid } from "./upload.utils";
 import { v4 as uuidv4 } from "uuid";
 
 @Injectable()
@@ -35,22 +34,27 @@ export class UploadService {
             return {
                 ...b,
                 trackerId,
-                eventId: getBreadcrumbEventUid(b),
             };
         });
-        let lastId = 0;
+        let lastEventNodeId = 0;
+        let lastAbstractEventNodeId = 0
         const ids = [];
         for (let i = 0; i < graphEvents.length; i++) {
             const event = graphEvents[i];
             if (i === 0) {
-                lastId = await this.neo4jHelperService.newEventNode(event);
+                const res = await this.neo4jHelperService.newEventNode(event);
+                lastEventNodeId = res.lastEventNodeId;
+                lastAbstractEventNodeId = res.lastAbstractEventNodeId;
             } else {
-                lastId = await this.neo4jHelperService.newEventNode(
+                const res = await this.neo4jHelperService.newEventNode(
                     event,
-                    lastId
+                    lastEventNodeId,
+                    lastAbstractEventNodeId
                 );
+                lastEventNodeId = res.lastEventNodeId;
+                lastAbstractEventNodeId = res.lastAbstractEventNodeId;
             }
-            ids.push(lastId);
+            ids.push(lastEventNodeId);
         }
         return ids;
     }

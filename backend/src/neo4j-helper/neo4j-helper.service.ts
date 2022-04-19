@@ -1,38 +1,34 @@
 import { Injectable } from "@nestjs/common";
 import { Neo4jEvent } from "src/neo4j-helper/types/neo4j-event";
-import { getEventUid } from "./neo4j-helper.util";
 import { Neo4jService } from "nest-neo4j";
 import { AuthInfoType } from "src/upload/dto/upload-event-type.dto";
 import { getBuilder, getInstance } from "src/neo4j";
-import { RelationshipType } from "neode";
+import { washBreadcrumbEventData } from "src/upload/upload.utils";
 
 @Injectable()
 export class Neo4jHelperService {
     constructor(private readonly neo4jService: Neo4jService) {}
 
-    async newEventNode(event: Neo4jEvent, lastNodeId?: number) {
-        const instance = getInstance();
-        const builder = getBuilder();
-        const uid = getEventUid(event);
+    async newEventNode(event: Neo4jEvent, lastEventNodeId?: number, lastAbstractEventNodeId?: number): Promise<{lastEventNodeId: number, lastAbstractEventNodeId: number}> {
+        let instance = getInstance();
+        let builder = getBuilder();
         const res = await builder
             .merge('e', "Event", {
                 type: event.type,
                 category: event.category,
-                trackerId: event.trackerId,
-                eventId: event.eventId,
                 data: JSON.stringify(event.data),
-                time: event.time,
                 level: event.level,
-                uid: uid,
+                trackerId: event.trackerId,
+                time: event.time,
             })
             .return("e")
             .execute();
         const eId = instance.hydrateFirst(res, "e").id();
-        if (eId && lastNodeId) {
+        if (eId && lastEventNodeId) {
             const builder = getBuilder();
             await builder
                 .match("l", "Event")
-                .where("id(l)", lastNodeId)
+                .where("id(l)", lastEventNodeId)
                 .match("e", "Event")
                 .where("id(e)", eId)
                 .merge("e")
@@ -41,7 +37,43 @@ export class Neo4jHelperService {
                 .return("e")
                 .execute();
         }
-        return eId;
+        instance = getInstance();
+        builder = getBuilder();
+        const abstractRes = await builder
+            .merge('ae', "AbstractEvent", {
+                type: event.type,
+                category: event.category,
+                data: JSON.stringify(washBreadcrumbEventData(event.data, event.type)),
+                level: event.level,
+            })
+            .return("ae")
+            .execute();
+        const abstractEId = instance.hydrateFirst(abstractRes, "ae").id();
+        builder = getBuilder();
+        await builder
+            .match("ae", "AbstractEvent")
+            .where("id(ae)", abstractEId)
+            .match("e", "Event")
+            .where("id(e)", eId)
+            .merge("e")
+            .relationship("IS", "out")
+            .to("ae")
+            .return("e")
+            .execute();
+        if (abstractEId && lastAbstractEventNodeId) {
+            builder = getBuilder();
+            await builder
+                .match("al", "AbstractEvent")
+                .where("id(al)", lastAbstractEventNodeId)
+                .match("ae", "AbstractEvent")
+                .where("id(ae)", abstractEId)
+                .create("ae")
+                .relationship("NEXT", "in")
+                .to("al")
+                .return("ae")
+                .execute();
+        }
+        return {lastEventNodeId: eId, lastAbstractEventNodeId: abstractEId};
     }
 
     async getUser(authInfo: AuthInfoType) {
