@@ -3,6 +3,7 @@ export function getInstance() {
     if (instance) {
         return instance;
     } else {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         instance = require('neode')
             .fromEnv()
             .with({

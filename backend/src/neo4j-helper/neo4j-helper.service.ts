@@ -4,6 +4,7 @@ import { Neo4jService } from "nest-neo4j";
 import { AuthInfoType } from "src/upload/dto/upload-event-type.dto";
 import { getBuilder, getInstance } from "src/neo4j";
 import { washBreadcrumbEventData } from "src/upload/upload.utils";
+import { TargetEvent } from "src/graph-query/dto/key-events.dto";
 
 @Injectable()
 export class Neo4jHelperService {
@@ -62,16 +63,13 @@ export class Neo4jHelperService {
             .execute();
         if (abstractEId && lastAbstractEventNodeId) {
             builder = getBuilder();
-            await builder
-                .match("al", "AbstractEvent")
-                .where("id(al)", lastAbstractEventNodeId)
-                .match("ae", "AbstractEvent")
-                .where("id(ae)", abstractEId)
-                .create("ae")
-                .relationship("NEXT", "in")
-                .to("al")
-                .return("ae")
-                .execute();
+            await this.neo4jService.write(
+                `MATCH (al:AbstractEvent) WHERE id(al)=${lastAbstractEventNodeId}
+                MATCH (ae:AbstractEvent) WHERE id(ae)=${abstractEId}
+                MERGE (ae)<-[r:NEXT]-(al)
+                ON CREATE SET r.count = 1
+                ON MATCH SET r.count = r.count + 1`
+            );
         }
         return {lastEventNodeId: eId, lastAbstractEventNodeId: abstractEId};
     }
@@ -111,5 +109,11 @@ export class Neo4jHelperService {
             .to("e")
             .return("e")
             .execute();
+    }
+
+    async getAbstractEventId(event: TargetEvent) {
+        const instance = getInstance();
+        const res = await instance.cypher('MATCH (e:AbstractEvent {type: $type, level: $level, data: $data}) RETURN e', event)
+        return instance.hydrateFirst(res, "e").id();
     }
 }
