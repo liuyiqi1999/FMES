@@ -8,8 +8,8 @@ export class GraphQueryController {
 
     @Post('/key-event')
     async getKeyEvents(@Body() getKeyEventsDto: GetKeyEventsDto): Promise<GetKeyEventsResult> {
-        const { targets } = getKeyEventsDto;
-        const res = await this.graphQueryService.getKeyEvents(targets);
+        const { targets, sources } = getKeyEventsDto;
+        const res = await this.graphQueryService.getKeyEvents(targets, sources);
         return res;
     }
 

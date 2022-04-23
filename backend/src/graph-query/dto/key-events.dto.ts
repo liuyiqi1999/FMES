@@ -5,7 +5,8 @@ export interface TargetEvent {
 }
 
 export interface GetKeyEventsDto {
-    targets: TargetEvent[]
+    targets: TargetEvent[],
+    sources?: TargetEvent[]
 }
 
 export interface KeyEvent extends TargetEvent {

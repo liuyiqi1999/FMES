@@ -89,7 +89,21 @@ async function onGetKeyEvent() {
     targets: [{
         type: 'Customer',
         level: 'error',
-        data: '{"name":"报告渲染完成"}',
+        data: '{"name":"CHECK"}',
+    }]
+  })
+}
+async function onGetKeyEventWithSource() {
+  await axios.post('http://localhost:3000/graph-query/key-event', {
+    targets: [{
+        type: 'Customer',
+        level: 'error',
+        data: '{"name":"CHECK"}',
+    }],
+    sources: [{
+      type: 'Route',
+      level: 'info',
+      data: '{"from":"/file","to":"/config"}'
     }]
   })
 }
@@ -114,7 +128,8 @@ async function onGetKeyEvent() {
     <button id="promiseError" @click="promiseError">promiseError</button>
   </div>
   <div>
-    <button id="getKeyEvent" @click="onGetKeyEvent">测试查找路径关键节点</button>
+    <button id="getKeyEvent" @click="onGetKeyEvent">Key Event</button>
+    <button id="getKeyEvent" @click="onGetKeyEventWithSource">Key Event With Source Nodes</button>
   </div>
 </template>
 

@@ -10,11 +10,18 @@ export class GraphQueryService {
     constructor(private readonly neo4jService: Neo4jService,
         private readonly neo4jHelperService: Neo4jHelperService) {}
 
-    async getKeyEvents(targets: TargetEvent[]): Promise<GetKeyEventsResult> {
+    async getKeyEvents(targets: TargetEvent[], sources?: TargetEvent[]): Promise<GetKeyEventsResult> {
         let res;
         try {
             await this.projectKeyEventsGraph(targets);
-            res = await this.searchKeyEvents();
+            const sourceNodeIds = sources ? await Promise.all(sources.map(source => {
+                return this.neo4jHelperService.getAbstractEventId(source)
+            })) : [];
+            if (sourceNodeIds.length > 0){
+                res = await this.searchKeyEvents(sourceNodeIds);
+            } else {
+                res = await this.searchKeyEvents();
+            }
         } catch (error) {
             console.log(error);
         } finally {
@@ -38,13 +45,16 @@ export class GraphQueryService {
         )
     }
 
-    private async searchKeyEvents() {
+    private async searchKeyEvents(sourceNodeIds?: number[]) {
         const instance = getInstance();
+        const sourceNodeIdsStr = sourceNodeIds ? `[${sourceNodeIds.join(',')}]` : '';
         const res = await instance.cypher(
             `
+            ${sourceNodeIds ? 'MATCH (s:AbstractEvent) WHERE id(s) IN ' + sourceNodeIdsStr : ''}
             CALL gds.pageRank.stream('${KEY_EVENT_GRAPH_NAME}',{
                 dampingFactor: ${KEY_EVENT_DAMPING_FACTOR},
                 relationshipWeightProperty: 'count',
+                ${sourceNodeIds ? 'sourceNodes: [s],' : ''}
                 scaler: 'L1Norm'
             })
             YIELD nodeId, score
