@@ -6,4 +6,4 @@ export enum KEY_EVENT_COMMUNITY_ENUM {
     TARGET,
     KEY
 }
-export const DEFAULT_PAGERANK = 0;
+export const KEY_EVENT_DEFAULT_PAGERANK = 0;

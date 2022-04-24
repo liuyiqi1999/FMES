@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Neo4jService } from "nest-neo4j";
-import { getInstance } from 'src/neo4j';
 import { Neo4jHelperService } from 'src/neo4j-helper/neo4j-helper.service';
-import { DEFAULT_PAGERANK, KEY_EVENT_COMMUNITY_ENUM, KEY_EVENT_DAMPING_FACTOR, KEY_EVENT_GRAPH_NAME } from './const';
+import { KEY_EVENT_DEFAULT_PAGERANK, KEY_EVENT_COMMUNITY_ENUM, KEY_EVENT_DAMPING_FACTOR, KEY_EVENT_GRAPH_NAME } from './const';
 import { TargetEvent } from './dto/key-events.dto';
 
 @Injectable()
@@ -36,7 +35,7 @@ export class GraphQueryService {
         await this.neo4jService.write(
             `
             MATCH (d:AbstractEvent)
-            SET d += {pagerank: ${DEFAULT_PAGERANK}, keyEventCommunity: ${KEY_EVENT_COMMUNITY_ENUM.NOT_INCLUDED}}
+            SET d += {pagerank: ${KEY_EVENT_DEFAULT_PAGERANK}, keyEventCommunity: ${KEY_EVENT_COMMUNITY_ENUM.NOT_INCLUDED}}
             `
         );
         await this.neo4jService.write(
@@ -62,15 +61,28 @@ export class GraphQueryService {
         const sourceNodeIdsStr = sourceNodeIds ? `[${sourceNodeIds.join(',')}]` : '';
         await this.neo4jService.write(
             `
-            ${sourceNodeIds ? 'MATCH (s:AbstractEvent) WHERE id(s) IN ' + sourceNodeIdsStr : ''}
             CALL gds.pageRank.write('${KEY_EVENT_GRAPH_NAME}',{
                 dampingFactor: ${KEY_EVENT_DAMPING_FACTOR},
                 relationshipWeightProperty: 'count',
-                ${sourceNodeIds ? 'sourceNodes: [s],' : ''}
-                scaler: 'L1Norm',
+                ${sourceNodeIds ? 'sourceNodes: ' + sourceNodeIdsStr + ',' : ''}
+                scaler: 'Max',
                 writeProperty: 'pagerank'
             })
             YIELD nodePropertiesWritten, ranIterations
+            `
+        )
+        await this.neo4jService.write(
+            `
+            MATCH (t:AbstractEvent) WHERE id(t) in [${targetIds.join(',')}]
+            CALL apoc.path.expandConfig(t, {
+                beginSequenceAtStart: true,
+                labelFilter: 'AbstractEvent',
+                relationshipFilter: "<NEXT",
+                uniqueness: 'NODE_RECENT'
+            })
+            YIELD path
+            MATCH (a:AbstractEvent) WHERE a in nodes(path)
+            SET a.pagerank = a.pagerank + 1
             `
         )
         await this.neo4jService.write(

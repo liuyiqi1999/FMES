@@ -11,7 +11,8 @@
     "@mitojs/browser": "^3.0.1",
     "@mitojs/vue": "^3.0.1",
     "axios": "^0.26.1",
-    "neovis.js": "^1.6.0",
+    "core-js": "^3.22.2",
+    "neovis.js": "^2.0.0-alpha.9",
     "uuid": "^8.3.2",
     "vue": "^3.2.33",
     "vue-router": "^4.0.14"
