@@ -46,6 +46,7 @@ export class Neo4jHelperService {
                 category: event.category,
                 data: JSON.stringify(washBreadcrumbEventData(event.data, event.type)),
                 level: event.level,
+                pagerank: 0
             })
             .return("ae")
             .execute();

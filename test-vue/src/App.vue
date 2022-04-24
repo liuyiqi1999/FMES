@@ -7,6 +7,7 @@
     <router-link to="/config" class="link">Config</router-link>
     <router-link to="/dashboard" class="link">Dashboard</router-link>
     <router-link to="/file" class="link">File</router-link>
+    <router-link to="/viz" class="link">Visualization</router-link>
   </div>
   <router-view></router-view>
 </template>

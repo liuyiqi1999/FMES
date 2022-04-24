@@ -14,5 +14,3 @@ export interface KeyEvent extends TargetEvent {
     score: number,
 }
 
-export type GetKeyEventsResult = KeyEvent[]
-

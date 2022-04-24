@@ -2,75 +2,92 @@ import { Injectable } from '@nestjs/common';
 import { Neo4jService } from "nest-neo4j";
 import { getInstance } from 'src/neo4j';
 import { Neo4jHelperService } from 'src/neo4j-helper/neo4j-helper.service';
-import { KEY_EVENT_DAMPING_FACTOR, KEY_EVENT_GRAPH_NAME } from './const';
-import { TargetEvent, GetKeyEventsResult } from './dto/key-events.dto';
+import { DEFAULT_PAGERANK, KEY_EVENT_COMMUNITY_ENUM, KEY_EVENT_DAMPING_FACTOR, KEY_EVENT_GRAPH_NAME } from './const';
+import { TargetEvent } from './dto/key-events.dto';
 
 @Injectable()
 export class GraphQueryService {
     constructor(private readonly neo4jService: Neo4jService,
         private readonly neo4jHelperService: Neo4jHelperService) {}
 
-    async getKeyEvents(targets: TargetEvent[], sources?: TargetEvent[]): Promise<GetKeyEventsResult> {
-        let res;
+    async getKeyEvents(targets: TargetEvent[], sources?: TargetEvent[]) {
+
         try {
-            await this.projectKeyEventsGraph(targets);
+            const targetIds = await Promise.all(targets.map(target => {
+                return this.neo4jHelperService.getAbstractEventId(target);
+            }))
+            await this.projectKeyEventsGraph(targetIds);
             const sourceNodeIds = sources ? await Promise.all(sources.map(source => {
                 return this.neo4jHelperService.getAbstractEventId(source)
             })) : [];
             if (sourceNodeIds.length > 0){
-                res = await this.searchKeyEvents(sourceNodeIds);
+                await this.searchKeyEvents(targetIds, sourceNodeIds);
             } else {
-                res = await this.searchKeyEvents();
+                await this.searchKeyEvents(targetIds);
             }
         } catch (error) {
             console.log(error);
         } finally {
             await this.dropProjectGraph(KEY_EVENT_GRAPH_NAME);
         }
-        return res;
     }
 
-    private async projectKeyEventsGraph(targets: TargetEvent[]) {
-        const targetIds = await Promise.all(targets.map(target => {
-            return this.neo4jHelperService.getAbstractEventId(target);
-        }))
+    private async projectKeyEventsGraph(targetIds: number[]) {
+        await this.neo4jService.write(
+            `
+            MATCH (d:AbstractEvent)
+            SET d += {pagerank: ${DEFAULT_PAGERANK}, keyEventCommunity: ${KEY_EVENT_COMMUNITY_ENUM.NOT_INCLUDED}}
+            `
+        );
         await this.neo4jService.write(
             `
             MATCH (t:AbstractEvent) WHERE id(t) in [${targetIds.join(',')}]
-            MATCH p = (a:AbstractEvent)-[:NEXT*]->(t)
-            MATCH (a:AbstractEvent)-[r:NEXT]->(c:AbstractEvent) WHERE a IN nodes(p) AND c IN nodes(p)
+            CALL apoc.path.expandConfig(t, {
+                beginSequenceAtStart: true,
+                labelFilter: 'AbstractEvent',
+                relationshipFilter: "<NEXT",
+                uniqueness: 'NODE_RECENT'
+            })
+            YIELD path
+            MATCH (a:AbstractEvent)-[r:NEXT]->(c:AbstractEvent) WHERE a IN nodes(path) AND c IN nodes(path)
+            SET a.keyEventCommunity = ${KEY_EVENT_COMMUNITY_ENUM.INCLUDED}
+            SET c.keyEventCommunity = ${KEY_EVENT_COMMUNITY_ENUM.INCLUDED}
             WITH gds.alpha.graph.project('${KEY_EVENT_GRAPH_NAME}', a, c, {}, {properties: r{.count}}) AS g
             RETURN g.graphName AS graph, g.nodeCount AS nodes, g.relationshipCount AS rels
             `
-        )
+            )
     }
 
-    private async searchKeyEvents(sourceNodeIds?: number[]) {
-        const instance = getInstance();
+    private async searchKeyEvents(targetIds: number[], sourceNodeIds?: number[]) {
         const sourceNodeIdsStr = sourceNodeIds ? `[${sourceNodeIds.join(',')}]` : '';
-        const res = await instance.cypher(
+        await this.neo4jService.write(
             `
             ${sourceNodeIds ? 'MATCH (s:AbstractEvent) WHERE id(s) IN ' + sourceNodeIdsStr : ''}
-            CALL gds.pageRank.stream('${KEY_EVENT_GRAPH_NAME}',{
+            CALL gds.pageRank.write('${KEY_EVENT_GRAPH_NAME}',{
                 dampingFactor: ${KEY_EVENT_DAMPING_FACTOR},
                 relationshipWeightProperty: 'count',
                 ${sourceNodeIds ? 'sourceNodes: [s],' : ''}
-                scaler: 'L1Norm'
+                scaler: 'L1Norm',
+                writeProperty: 'pagerank'
             })
-            YIELD nodeId, score
-            RETURN DISTINCT nodeId, gds.util.asNode(nodeId).type AS type, gds.util.asNode(nodeId).level AS level, gds.util.asNode(nodeId).data AS data, score
-            ORDER BY score DESC, type ASC
+            YIELD nodePropertiesWritten, ranIterations
             `
         )
-        return res.records.map(record => {
-            return {
-                nodeId: record.get('nodeId').low,
-                type: record.get('type'),
-                level: record.get('level'),
-                data: record.get('data'),
-                score: record.get('score'),
-            }
-        })
+        await this.neo4jService.write(
+            `
+            MATCH (a:AbstractEvent)
+            WITH a ORDER BY a.pagerank DESC
+            WITH collect(id(a)) as orderedIds
+            MATCH (k:AbstractEvent) WHERE id(k) IN orderedIds[0..5]
+            SET k.keyEventCommunity = ${KEY_EVENT_COMMUNITY_ENUM.KEY}
+            `
+        )
+        await this.neo4jService.write(
+            `
+            MATCH (t:AbstractEvent) WHERE id(t) in [${targetIds.join(',')}]
+            SET t.keyEventCommunity = ${KEY_EVENT_COMMUNITY_ENUM.TARGET}
+            `
+        )
     }
 
     private async dropProjectGraph(graphName: string) {

@@ -22,7 +22,11 @@ const routes = [
       name: 'File',
       component: () => import('../views/reportPage.vue'),
     },
-
+    {
+      path: '/viz',
+      name: 'Visualization',
+      component: () => import('../views/viz.vue'),
+    }
   ];
   
   // 导出路由

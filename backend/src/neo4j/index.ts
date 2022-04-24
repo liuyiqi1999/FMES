@@ -25,6 +25,7 @@ const abstractEvent = {
     category: 'string',
     data: 'string',
     level: 'string',
+    pagerank: 'number'
 }
 
 const event = {
