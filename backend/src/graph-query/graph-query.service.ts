@@ -19,7 +19,7 @@ export class GraphQueryService {
         )
     }
 
-    async getKeyEvents(targets: TargetEvent[], sources?: TargetEvent[]) {
+    async getKeyEvents(targets: TargetEvent[], sources?: TargetEvent[], isWeighted = false) {
 
         try {
             const targetIds = await Promise.all(targets.map(target => {
@@ -30,9 +30,9 @@ export class GraphQueryService {
                 return this.neo4jHelperService.getAbstractEventId(source)
             })) : [];
             if (sourceNodeIds.length > 0){
-                await this.searchKeyEvents(targetIds, sourceNodeIds);
+                await this.searchKeyEvents(targetIds, isWeighted, sourceNodeIds);
             } else {
-                await this.searchKeyEvents(targetIds);
+                await this.searchKeyEvents(targetIds, isWeighted);
             }
         } catch (error) {
             console.log(error);
@@ -67,13 +67,13 @@ export class GraphQueryService {
             )
     }
 
-    private async searchKeyEvents(targetIds: number[], sourceNodeIds?: number[]) {
+    private async searchKeyEvents(targetIds: number[], isWeighted: boolean, sourceNodeIds?: number[]) {
         const sourceNodeIdsStr = sourceNodeIds ? `[${sourceNodeIds.join(',')}]` : '';
         await this.neo4jService.write(
             `
             CALL gds.pageRank.write('${KEY_EVENT_GRAPH_NAME}',{
                 dampingFactor: ${KEY_EVENT_DAMPING_FACTOR},
-                relationshipWeightProperty: 'count',
+                ${isWeighted ? `relationshipWeightProperty: 'count',` : ''}
                 ${sourceNodeIds ? 'sourceNodes: ' + sourceNodeIdsStr + ',' : ''}
                 scaler: 'Max',
                 writeProperty: 'pagerank'
