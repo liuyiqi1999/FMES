@@ -9,6 +9,16 @@ export class GraphQueryService {
     constructor(private readonly neo4jService: Neo4jService,
         private readonly neo4jHelperService: Neo4jHelperService) {}
 
+    async clear() {
+        await this.neo4jService.write(
+            `
+            MATCH (n:AbstractEvent)
+            SET n.pagerank = ${KEY_EVENT_DEFAULT_PAGERANK}
+            SET n.keyEventCommunity = ${KEY_EVENT_COMMUNITY_ENUM.NOT_INCLUDED}
+            `
+        )
+    }
+
     async getKeyEvents(targets: TargetEvent[], sources?: TargetEvent[]) {
 
         try {
@@ -48,7 +58,7 @@ export class GraphQueryService {
                 uniqueness: 'NODE_RECENT'
             })
             YIELD path
-            MATCH (a:AbstractEvent)-[r:NEXT]->(c:AbstractEvent) WHERE a IN nodes(path) AND c IN nodes(path)
+            MATCH (a:AbstractEvent)-[r:NEXT]->(c:AbstractEvent) WHERE a IN nodes(path) AND (NOT id(a) IN [${targetIds.join(',')}]) AND c IN nodes(path)
             SET a.keyEventCommunity = ${KEY_EVENT_COMMUNITY_ENUM.INCLUDED}
             SET c.keyEventCommunity = ${KEY_EVENT_COMMUNITY_ENUM.INCLUDED}
             WITH gds.alpha.graph.project('${KEY_EVENT_GRAPH_NAME}', a, c, {}, {properties: r{.count}}) AS g

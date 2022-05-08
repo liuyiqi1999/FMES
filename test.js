@@ -43,7 +43,11 @@ function safeStringify (obj) {
         return 'Parse Error! ';
     }
 }
-const a = {a1: '1', a2: '1'};
-a.a2 = a;
-a.a3 = a;
-console.log(safeStringify(a));
+// const a = {a1: '1', a2: '1'};
+// a.a2 = a;
+// a.a3 = a;
+// console.log(safeStringify(a));
+
+const a = {a1: '1'};
+const b = {b1: a, b2: a};
+console.log(JSON.stringify(b))

@@ -13,4 +13,9 @@ export class GraphQueryController {
         return {};
     }
 
+    @Post('/clear')
+    async clear() {
+        await this.graphQueryService.clear();
+        return {};
+    }
 }

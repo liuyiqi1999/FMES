@@ -4,10 +4,12 @@ import { init } from "@mitojs/browser";
 import { vuePlugin } from "@mitojs/vue";
 import { v4 as uuidv4 } from "uuid";
 import router from './router';
+import naive from 'naive-ui';
 
 const app = createApp(App);
 console.log('create app');
 app.use(router);
+app.use(naive);
 const MitoInstance = init(
     {
         debug: true,
